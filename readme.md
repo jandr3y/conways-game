@@ -1,0 +1,1 @@
+https://jandr3y.github.io/conways-game/
