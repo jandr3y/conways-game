@@ -1,40 +1,41 @@
 const canvas = document.getElementById('root');
 const context = canvas.getContext('2d');
-let ALIVE_CELLS = [
-  [1,0],
-  [3,1],
-  [0,2],
-  [1,2],
-  [4,2],
-  [5,2],
-  [6,2],
-]; // acorn
+let paused = true;
+// acorn
+const ACORN_CELLS = new Set([ '105,105', '106,105', '106,103', '108,104', '109,105', '110,105', '111,105'])
+let ALIVE_CELLS = new Set([...ACORN_CELLS]); 
 
-ALIVE_CELLS = [
-  [1,1],
-  [2,0],
-  [2,2]
-]
+const pause = () => paused = !paused
+const reset = () => ALIVE_CELLS = new Set([...ACORN_CELLS])
 
-function findAliveParents(cell, aliveCells, skip = false) {
-  return aliveCells.filter(cellFind => {
-    if (skip && cellFind[0] === skip[0] && cellFind[1] === skip[1]) {
-      return false;
+function findAliveParents(cell, aliveCells) {
+  const parents = new Set()
+  aliveCells.forEach(cellFind => {
+    const cf = cellFind.split(',')
+    const c = cell.split(',')
+
+    if (
+      cf[0] >= (Number(c[0]) - 1) &&
+      cf[0] <= (Number(c[0]) + 1) &&
+      cf[1] >= (c[1] - 1) &&
+      cf[1] <= (Number(c[1]) + 1) &&
+      cell !== cellFind
+    ) {
+      parents.add(cellFind)
     }
-
-    return cellFind[0] >= (cell[0] - 1) &&
-    cellFind[0] <= (cell[0] + 1) &&
-    cellFind[1] >= (cell[1] - 1) &&
-    cellFind[1] <= (cell[1] + 1)
   })
+
+  return parents
 }
 
 function findDeadParents(cell, aliveParents) {
-  const deadCells = [];
-  for (let i = (cell[0] - 1); i <= (cell[0] + 1); i++) {
-    for (let j = (cell[1] - 1); j <= (cell[1] + 1); j++) {
-      if (aliveParents.filter(parent => parent[0] === i && parent[1] === j).length === 0) {
-        deadCells.push([i, j])
+  const deadCells = new Set();
+  const c = cell.split(',')
+
+  for (let i = (c[0] - 1); i <= (Number(c[0]) + 1); i++) {
+    for (let j = (c[1] - 1); j <= (Number(c[1]) + 1); j++) {
+      if (!aliveParents.has(`${i},${j}`)) {
+        deadCells.add(`${i},${j}`)
       }
     }
   }
@@ -46,59 +47,41 @@ function calc() {
   const cellsToCreate = []
   const cellsToKill = []
 
-  for (let i = 0; i < ALIVE_CELLS.length; i++) {
-    const cell = ALIVE_CELLS[i];
-
-    if (cell[0] == 2 && cell[1] == 2) {
-      //debugger
-    }
-
-    const aliveParents = findAliveParents(cell, ALIVE_CELLS, cell)
+  ALIVE_CELLS.forEach(cell => {
+    const aliveParents = findAliveParents(cell, ALIVE_CELLS)
     const deadParents  = findDeadParents(cell, aliveParents)
     
-    if (aliveParents.length < 2) {
-      cellsToKill.push(ALIVE_CELLS[i])
-      continue;
-    }
-  
-    if (aliveParents.length > 3) {
-      cellsToKill.push(ALIVE_CELLS[i])
-      continue;
-    }
-
-    for (let j = 0; j < deadParents.length; j++) {
-      const deadCell = deadParents[j]
-
+    deadParents.forEach(deadCell => {
       const deadCellAliveParents = findAliveParents(deadCell, ALIVE_CELLS)
-      if (deadCellAliveParents.length === 3) {
-        cellsToCreate.push([...deadCell])
+      if (deadCellAliveParents.size === 3) {
+        cellsToCreate.push(deadCell)
       }
-    }
-  }
+    })
 
-  ALIVE_CELLS = ALIVE_CELLS.filter(c => {
-    for (let cf of cellsToKill) {
-      return cf[0] === c[0] && cf[1] === c[1]
+    if (aliveParents.size < 2) {
+      cellsToKill.push(cell)
+      return
     }
-
-    return true
-  })
   
-  for (let cc in cellsToCreate) {
-    if (!ALIVE_CELLS.filter(cf => cf[0] === cellsToCreate[cc][0] && cf[1] === cellsToCreate[cc][1]).length) {
-      ALIVE_CELLS.push(cellsToCreate[cc])
+    if (aliveParents.size > 3) {
+      cellsToKill.push(cell)
+      return
     }
-  }
+  })
+
+  cellsToKill.forEach(v => ALIVE_CELLS.delete(v))
+  cellsToCreate.forEach(v => ALIVE_CELLS.add(v))
 }
 
 function gameloop() {
   context.clearRect(0,0,500,500)
-  ALIVE_CELLS.map(cell => {
+  if (!paused) calc()
+  ALIVE_CELLS.forEach(cell => {
+    const c = cell.split(',')
     context.fillStyle = 'black';
-    context.fillRect(cell[0] * 4, cell[1] * 4, 4, 4)
+    context.fillRect(c[0] * 4, c[1] * 4, 4, 4)
   })
   window.requestAnimationFrame(gameloop)
 }
 
-//setInterval(() => calc(), 1000)
 gameloop();
