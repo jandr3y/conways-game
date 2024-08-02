@@ -1,8 +1,16 @@
 const canvas = document.getElementById('root');
 const context = canvas.getContext('2d');
+const debugEl = document.getElementById('debug');
+
+const debug = (gen, pop) => debugEl.innerText = `
+  Population: ${pop}
+  Generation: ${gen}
+`
+
 let paused = true;
+let gen = 0;
 // acorn
-const ACORN_CELLS = new Set([ '105,105', '106,105', '106,103', '108,104', '109,105', '110,105', '111,105'])
+const ACORN_CELLS = new Set([ '55,55', '56,55', '56,53', '58,54', '59,55', '60,55', '61,55'])
 let ALIVE_CELLS = new Set([...ACORN_CELLS]); 
 
 const pause = () => paused = !paused
@@ -75,7 +83,12 @@ function calc() {
 
 function gameloop() {
   context.clearRect(0,0,500,500)
-  if (!paused) calc()
+  if (!paused) {
+    calc()
+    gen++;
+  }
+
+  debug(gen, ALIVE_CELLS.size)
   ALIVE_CELLS.forEach(cell => {
     const c = cell.split(',')
     context.fillStyle = 'black';
